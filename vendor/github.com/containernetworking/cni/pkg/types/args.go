@@ -75,6 +75,7 @@ func LoadArgs(args string, container interface{}) error {
 		return nil
 	}
 
+	// 获取到interface{}变量对应的值
 	containerValue := reflect.ValueOf(container)
 
 	pairs := strings.Split(args, ";")
@@ -88,6 +89,7 @@ func LoadArgs(args string, container interface{}) error {
 		valueString := kv[1]
 		keyField := GetKeyField(keyString, containerValue)
 		if !keyField.IsValid() {
+			// 未知参数
 			unknownArgs = append(unknownArgs, pair)
 			continue
 		}
@@ -114,6 +116,7 @@ func LoadArgs(args string, container interface{}) error {
 		}
 	}
 
+	// 如果变量中包含了“IgnoreUnknown”的key-value对，并且跳过报错
 	isIgnoreUnknown := GetKeyField("IgnoreUnknown", containerValue).Bool()
 	if len(unknownArgs) > 0 && !isIgnoreUnknown {
 		return fmt.Errorf("ARGS: unknown args %q", unknownArgs)

@@ -167,6 +167,7 @@ func (ns *netNS) errorIfClosed() error {
 	return nil
 }
 
+// 进入sandbox的命名空间，运行toRun函数
 func (ns *netNS) Do(toRun func(NetNS) error) error {
 	if err := ns.errorIfClosed(); err != nil {
 		return err

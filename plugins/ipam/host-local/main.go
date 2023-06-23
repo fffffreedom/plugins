@@ -57,6 +57,8 @@ func cmdCheck(args *skel.CmdArgs) error {
 }
 
 func cmdAdd(args *skel.CmdArgs) error {
+	// ipam配置解析
+	// runtime通过stdin和环境变量传递参数给cni插件
 	ipamConf, confVersion, err := allocator.LoadIPAMConfig(args.StdinData, args.Args)
 	if err != nil {
 		return err
@@ -64,6 +66,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 
 	result := &current.Result{CNIVersion: current.ImplementedSpecVersion}
 
+	// dns namesever
 	if ipamConf.ResolvConf != "" {
 		dns, err := parseResolvConf(ipamConf.ResolvConf)
 		if err != nil {
@@ -72,6 +75,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 		result.DNS = *dns
 	}
 
+	// 在/var/lib/cni/networks目录下创建创建名称目录
 	store, err := disk.New(ipamConf.Name, ipamConf.DataDir)
 	if err != nil {
 		return err
@@ -86,14 +90,17 @@ func cmdAdd(args *skel.CmdArgs) error {
 	// and error if some remain
 	requestedIPs := map[string]net.IP{} //net.IP cannot be a key
 
+	// 所有要申请的ip都保存到requestedIPs
 	for _, ip := range ipamConf.IPArgs {
 		requestedIPs[ip.String()] = ip
 	}
 
 	for idx, rangeset := range ipamConf.Ranges {
+		// 创建IP分配器，IP保存在哪里？可在/var/lib/cni/networks目录中查看
 		allocator := allocator.NewIPAllocator(&rangeset, store, idx)
 
 		// Check to see if there are any custom IPs requested in this range.
+		// 判断是否有需要申请的ip在这个网段中
 		var requestedIP net.IP
 		for k, ip := range requestedIPs {
 			if rangeset.Contains(ip) {
@@ -112,6 +119,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return fmt.Errorf("failed to allocate for range %d: %v", idx, err)
 		}
 
+		//
 		allocs = append(allocs, allocator)
 
 		result.IPs = append(result.IPs, ipConf)

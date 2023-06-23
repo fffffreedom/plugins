@@ -52,7 +52,7 @@ type IPAMConfig struct {
 	DataDir    string         `json:"dataDir"`
 	ResolvConf string         `json:"resolvConf"`
 	Ranges     []RangeSet     `json:"ranges"`
-	IPArgs     []net.IP       `json:"-"` // Requested IPs from CNI_ARGS, args and capabilities
+	IPArgs     []net.IP       `json:"-"` // Requested IPs from CNI_ARGS, args and capabilities，IP的3个来源
 }
 
 type IPAMEnvArgs struct {
@@ -92,6 +92,7 @@ func LoadIPAMConfig(bytes []byte, envArgs string) (*IPAMConfig, string, error) {
 			return nil, "", err
 		}
 
+		// 环境变量中也可能包含IP
 		if e.IP.ToIP() != nil {
 			n.IPAM.IPArgs = []net.IP{e.IP.ToIP()}
 		}

@@ -44,6 +44,10 @@ var debugPostIPAMError error
 
 const defaultBrName = "cni0"
 
+// cni配置结构体
+// 结构体中的配置是怎么确定的？
+// types.NetConf是cni插件必须包含的配置
+// 其他字段和cni插件本身相关
 type NetConf struct {
 	types.NetConf
 	BrName       string `json:"bridge"`
@@ -58,6 +62,7 @@ type NetConf struct {
 	MacSpoofChk  bool   `json:"macspoofchk,omitempty"`
 	EnableDad    bool   `json:"enabledad,omitempty"`
 
+	// 结构体中定义结构，可以省掉type
 	Args struct {
 		Cni BridgeArgs `json:"cni,omitempty"`
 	} `json:"args,omitempty"`
@@ -91,6 +96,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
+// 解析配置
 func loadNetConf(bytes []byte, envArgs string) (*NetConf, string, error) {
 	n := &NetConf{
 		BrName: defaultBrName,
@@ -126,8 +132,8 @@ func loadNetConf(bytes []byte, envArgs string) (*NetConf, string, error) {
 
 // calcGateways processes the results from the IPAM plugin and does the
 // following for each IP family:
-//    - Calculates and compiles a list of gateway addresses
-//    - Adds a default route if needed
+//   - Calculates and compiles a list of gateway addresses
+//   - Adds a default route if needed
 func calcGateways(result *current.Result, n *NetConf) (*gwInfo, *gwInfo, error) {
 
 	gwsV4 := &gwInfo{}
@@ -337,6 +343,7 @@ func setupVeth(netns ns.NetNS, br *netlink.Bridge, ifName string, mtu int, hairp
 	contIface := &current.Interface{}
 	hostIface := &current.Interface{}
 
+	// 在netns对象对应在namespace中执行函数
 	err := netns.Do(func(hostNS ns.NetNS) error {
 		// create the veth pair in the container and move host end into host netns
 		hostVeth, containerVeth, err := ip.SetupVeth(ifName, mtu, mac, hostNS)
@@ -409,14 +416,17 @@ func enableIPForward(family int) error {
 	return ip.EnableIP6Forward()
 }
 
+// CmdArgs中定义了会传给cni插件的参数配置
 func cmdAdd(args *skel.CmdArgs) error {
 	var success bool = false
 
+	// 解析并加载配置
 	n, cniVersion, err := loadNetConf(args.StdinData, args.Args)
 	if err != nil {
 		return err
 	}
 
+	// IPAM有配置则为ip层
 	isLayer3 := n.IPAM.Type != ""
 
 	if n.IsDefaultGW {
@@ -427,17 +437,20 @@ func cmdAdd(args *skel.CmdArgs) error {
 		return fmt.Errorf("cannot set hairpin mode and promiscuous mode at the same time.")
 	}
 
+	// 创建和配置bridge
 	br, brInterface, err := setupBridge(n)
 	if err != nil {
 		return err
 	}
 
+	// 根据路径获取namespace
 	netns, err := ns.GetNS(args.Netns)
 	if err != nil {
 		return fmt.Errorf("failed to open netns %q: %v", args.Netns, err)
 	}
 	defer netns.Close()
 
+	// 创建并配置好veth
 	hostInterface, containerInterface, err := setupVeth(netns, br, args.IfName, n.MTU, n.HairpinMode, n.Vlan, n.mac)
 	if err != nil {
 		return err
@@ -459,6 +472,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 			return err
 		}
 		defer func() {
+			// 函数返回时，如果有问题，则success为false，需要进行清理
 			if !success {
 				if err := sc.Teardown(); err != nil {
 					fmt.Fprintf(os.Stderr, "%v", err)

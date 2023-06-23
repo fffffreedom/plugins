@@ -36,7 +36,7 @@ import (
 
 type NetConf struct {
 	types.NetConf
-	Master string `json:"master"`
+	Master string `json:"master"` // 父网卡
 	Mode   string `json:"mode"`
 	MTU    int    `json:"mtu"`
 }
@@ -136,6 +136,8 @@ func createIpvlan(conf *NetConf, ifName string, netns ns.NetNS) (*current.Interf
 		return nil, err
 	}
 
+	// 指定ipvlan的namespace
+	// 创建好后，两者分布不没的namespace，然后能连通？
 	mv := &netlink.IPVlan{
 		LinkAttrs: netlink.LinkAttrs{
 			MTU:         conf.MTU,

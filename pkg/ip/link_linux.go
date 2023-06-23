@@ -34,6 +34,8 @@ var (
 
 // makeVethPair is called from within the container's network namespace
 func makeVethPair(name, peer string, mtu int, mac string, hostNS ns.NetNS) (netlink.Link, error) {
+	// 初始化时，就指定了veth对的namespace
+	// 所以在下面LinkAdd时就直接是添加在了两个不同的namespace?
 	veth := &netlink.Veth{
 		LinkAttrs: netlink.LinkAttrs{
 			Name: name,
